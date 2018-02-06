@@ -1,6 +1,6 @@
 ;Author: Will Summerhill
 ;Create shell_bind_tcp shellcode
-;bind to a poart - accept as input
+;bind to a port - accept as input
 ;exec shell on incoming connections
 
 ;functions needed: socketcall (66 hex, 102 decimal), dup2 (0x63), execve (0x11), bind (0x112), accept
