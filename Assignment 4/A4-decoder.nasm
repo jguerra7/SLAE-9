@@ -14,8 +14,8 @@ decoder:
 	mov cl, Length		;loop counter - shellcode length is 25
 	
 	xor edx, edx
-	push 6
-	pop edx
+	push 6			;Note: used this method since previous methods created null bytes in shellcode
+	pop edx			;number to subtract from each byte for decoding
 
 ;XOR decoder loop
 xor_decode:
